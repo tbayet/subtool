@@ -144,10 +144,12 @@
             name: this.project_name,
             privacy: this.project_privacy,
             file: this.file_json,
-            type: "srt"
+            type: "srt",
+            startLang: this.project_startLang,
+            endLang: this.project_endLang
           }).then(response => {
             if (response.data) {
-              // REDIRECTION TO THE PROJECT => THEN CREATE USERNAME + SOCKET
+              this.$router.push('/project/' + response.data)
             } else {
               this.alert = {
                 type: 'error',

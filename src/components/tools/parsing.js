@@ -1,6 +1,14 @@
+
+/*  RETURN VALUE :
+    * [
+    *   {
+    *       index (int), start (string), end (string), content ([string, ...])
+    *   }, 
+    *   {...}
+    *  ] 
+*/
 export const srtToJson = (file) => {
     const splited_file = file.split("\n")
-    console.log(splited_file)
     let file_json = []
     let i = 0
     let val
@@ -37,7 +45,7 @@ export const srtToJson = (file) => {
 
         while (i < splited_file.length && splited_file[i].trim() == "")
             i++
-    };
+    }
     if (file_json.length == 0) {
         return {error: true, message: "No content in the file"}
     }
