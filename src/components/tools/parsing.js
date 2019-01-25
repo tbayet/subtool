@@ -2,7 +2,7 @@
 /*  RETURN VALUE :
     * [
     *   {
-    *       index (int), start (string), end (string), content ([string, ...])
+    *       index (int), start (string), end (string), content (string)
     *   }, 
     *   {...}
     *  ] 
@@ -15,7 +15,7 @@ export const srtToJson = (file) => {
     while (i < splited_file.length && splited_file[i].trim() == "")
             i++
     while (i < splited_file.length) {
-        let subtitle = {content: []}
+        let subtitle = {content: ""}
         val = splited_file[i].trim()
         if (/^\d+$/.test(val)) {
             subtitle.index = parseInt(val)
@@ -35,7 +35,9 @@ export const srtToJson = (file) => {
         }
 
         while ((val = splited_file[i].trim()) != "") {
-            subtitle.content.push(val)
+            if (subtitle.content.length)
+                subtitle.content += '\n'
+            subtitle.content += val
             i++
         }
         if (subtitle.content.length == 0) {

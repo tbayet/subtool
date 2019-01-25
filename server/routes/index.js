@@ -11,19 +11,22 @@ router.get('/', function(req, res, next) {
 
 router.post('/createproject', function(req, res, next) {
   const link = sha224(new Date().getTime().toString())
-  const file_end = req.body.file.map(elem => ({ index: elem.index, start: elem.start, end: elem.end, content: [] }))
+  const file_end = req.body.file.map(elem => ({ index: elem.index, start: elem.start, end: elem.end, content: "" }))
   //CHECK VALID ENTRIES
   
   fs.mkdir(__dirname + '/../files/' + link, { recursive: true }, function (err) {
     if (err) {
+      throw err
       res.send(false)
     } else {
       fs.appendFile(__dirname +'/../files/' + link + '/start.json', JSON.stringify(req.body.file), 'utf8', function (err) {
         if (err) {
+          throw err
           fs.rmdir(__dirname + '/../files/' + link, () => { res.send(false) })
         } else {
           fs.appendFile(__dirname +'/../files/' + link + '/end.json', JSON.stringify(file_end), 'utf8', function (err) {
             if (err) {
+              throw err
               fs.unlink(__dirname + '/../files/' + link + '/start.json', () => {
                 fs.rmdir(__dirname + '/../files/' + link, () => { res.send(false) })
               })
