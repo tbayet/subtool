@@ -2,6 +2,7 @@
   <v-container v-if="project.hasOwnProperty('name')">
     <v-layout
       text-xs-center
+      row
       wrap
     >
       <v-flex xs12 md12>
@@ -14,6 +15,7 @@
           </v-card-actions>
 
           <v-card-title primary-title>
+            <v-spacer></v-spacer>
             <div>
               <div class="headline">{{project.name}}</div>
               <span class="grey--text">[{{project.type}}] : {{project.startLang}} => {{project.endLang}}</span>
@@ -21,10 +23,21 @@
           </v-card-title>
         </v-card>
       </v-flex>
-
+      <v-flex xs12 md4 class="mt-4">
+        <v-card dark style="height:100px">
+          <v-textarea
+            style="text-align: justify; text-align-last: center;"
+            disabled
+            height="100px"
+            v-model="translated"
+            box
+            label="Translated from Yandex"
+          ></v-textarea>
+        </v-card>
+      </v-flex>
       <v-flex xs12 md8>
         <v-container>
-          <v-layout text-xs-center>
+          <v-layout text-xs-center row wrap>
             <v-flex xs12 md8>
               <v-card
                 v-for="indexPack in (packPerPage)"
@@ -94,6 +107,7 @@
       packLength: 10,
       lockedPacks: [],
       currentPack: 0,
+      translated: "",
     }),
     beforeMount() {
       this.getJsonFile()
@@ -110,6 +124,24 @@
       }
     },
     methods: {
+      translate(index) {
+        if (true) {
+          axios.get('https://translate.yandex.net/api/v1.5/tr.json/translate', { params: {
+                key: "trnsl.1.1.20161229T041736Z.65dd058529799b6b.cd475f6e9c57bd9632ed3b86bcca91c9fff3b0db",
+                text: this.jsonStart[index].content,
+                lang: this.project.endLang.toLowerCase(),
+              }
+            }, {
+            headers: {
+              'Content-type': 'application/x-www-form-urlencoded'
+            }
+          }).then(response => {
+              if (response.data) {
+                this.translated = response.data.text[0]
+            }
+          })
+        }
+      },
       getPack(index) {
         return (parseInt(index / this.packLength) + (index % this.packLength ? 1 : 0))
       },
@@ -129,6 +161,7 @@
           this.$socket.emit("packLocked", {pack: pack})
           this.currentPack = pack
         }
+        this.translate(index - 1)
       },
       getNextTabIndex(index) {
         const saveIndex = index
