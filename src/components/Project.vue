@@ -8,41 +8,35 @@
       <v-flex xs12 md12>
         <v-card>
           <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn icon>
-              <v-icon>favorite</v-icon>
-            </v-btn>
+            <validate-navigation v-model="clickPack" :locked="lockedPacks" :valid="validPacks" :confirmed="confirmedPacks" :totalPacks="nbPacks"></validate-navigation>           
           </v-card-actions>
 
           <v-card-title primary-title>
-            <v-spacer></v-spacer>
             <div>
               <div class="headline">{{project.name}}</div>
               <span class="grey--text">[{{project.type}}] : {{project.startLang}} => {{project.endLang}}</span>
             </div>
+            <v-spacer></v-spacer>
+            <v-btn icon><v-icon>save</v-icon></v-btn>
+            <v-btn icon><v-icon>save_alt</v-icon></v-btn>
           </v-card-title>
         </v-card>
       </v-flex>
+
       <v-flex xs12 md4 class="mt-4">
-        <v-card dark style="height:100px">
-          <v-textarea
-            style="text-align: justify; text-align-last: center;"
-            disabled
-            height="100px"
-            v-model="translated"
-            box
-            label="Translated from Yandex"
-          ></v-textarea>
-        </v-card>
+        <translate :lang="project.endLang.toLowerCase()" :text="currentText" :dev="true"></translate>
+        <rules></rules>
       </v-flex>
+
       <v-flex xs12 md8>
         <v-container>
           <v-layout text-xs-center row wrap>
             <v-flex xs12 md8>
               <v-card
-                v-for="indexPack in (packPerPage)"
-                :class="lockedPacks.includes(indexPack + (page - 1)*packPerPage) ? 'lockedPack' : ''"
+                v-for="indexPack in (page == nbPages ? (nbPacks % packPerPage ? nbPacks % packPerPage : packPerPage) : packPerPage)"
+                :class="{'confirmedPack': confirmedPacks.includes(indexPack + (page - 1)*packPerPage),'lockedPack': lockedPacks.includes(indexPack + (page - 1)*packPerPage), 'validPack': validPacks.includes(indexPack + (page - 1)*packPerPage)}"
                 :key="'pack-' + (indexPack + (page - 1)*packPerPage)"
+                :ref="'pack-' + (indexPack + (page - 1)*packPerPage)"
               >
                 <div
                   v-for="(source) in jsonStart.slice(startIndex(indexPack), endIndex(indexPack))"
@@ -56,13 +50,13 @@
                   <v-card-text :class="lockedPacks.includes(indexPack + (page - 1)*packPerPage) ? 'lockedPack' : ''">
                     <span class="headline" v-for="(content, key) in source.content" :key="'p-'+key">{{content}}</span>
                     <v-textarea
-                      :disabled="lockedPacks.includes(indexPack + (page - 1)*packPerPage)"
+                      :disabled="confirmedPacks.includes(indexPack + (page - 1)*packPerPage) || lockedPacks.includes(indexPack + (page - 1)*packPerPage)"
                       :ref="'tab-'+source.index"
                       @keydown.enter="onEnter(source.index, $event)"
                       @focus="onFocus(source.index)"
                       @input="onInput(source.index)"
                       style="text-align: justify; text-align-last: center;"
-                      :outline="!lockedPacks.includes(indexPack + (page - 1)*packPerPage)"
+                      :outline="!lockedPacks.includes(indexPack + (page - 1)*packPerPage && !confirmedPacks.includes(indexPack + (page - 1)*packPerPage))"
                       v-model="jsonEnd[source.index - 1].content"
                       auto-grow
                       single-line
@@ -72,8 +66,8 @@
                 </div>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn icon>
-                    <v-icon>favorite</v-icon>
+                  <v-btn :disabled="!validPacks.includes(indexPack + (page - 1)*packPerPage)" @click="confirmPack(indexPack + (page - 1)*packPerPage)" icon large>
+                    <v-icon large>{{confirmedPacks.includes(indexPack + (page - 1)*packPerPage) ? 'check_circle' : 'playlist_add_check'}}</v-icon>
                   </v-btn>
                 </v-card-actions>
               </v-card>
@@ -95,6 +89,9 @@
 
 <script>
   import axios from "axios"
+  import Translate from "./project/Translate"
+  import ValidateNavigation from "./project/ValidateNavigation"
+  import Rules from "./project/Rules"
 
   export default {
     props: ['link'],
@@ -107,7 +104,10 @@
       packLength: 10,
       lockedPacks: [],
       currentPack: 0,
-      translated: "",
+      clickPack: 0,
+      currentText: "",
+      validPacks: [],
+      confirmedPacks: [],
     }),
     beforeMount() {
       this.getJsonFile()
@@ -124,23 +124,25 @@
       }
     },
     methods: {
-      translate(index) {
-        if (true) {
-          axios.get('https://translate.yandex.net/api/v1.5/tr.json/translate', { params: {
-                key: "trnsl.1.1.20161229T041736Z.65dd058529799b6b.cd475f6e9c57bd9632ed3b86bcca91c9fff3b0db",
-                text: this.jsonStart[index].content,
-                lang: this.project.endLang.toLowerCase(),
-              }
-            }, {
-            headers: {
-              'Content-type': 'application/x-www-form-urlencoded'
-            }
-          }).then(response => {
-              if (response.data) {
-                this.translated = response.data.text[0]
-            }
-          })
+      confirmPack(index) {
+        if (this.confirmedPacks.includes(index) || this.validPacks.includes(index))
+          this.$socket.emit("setConfirmedPack", {index})
+      },
+      isValidPack(index) {
+        let valid = true
+        this.jsonEnd.slice((index - 1) * this.packLength, (index) * this.packLength).forEach(e => {
+          if (!e.content.length) {
+            e.valid = false
+            valid = false
+          }
+          else {
+            e.valid = true
+          }
+        })
+        if (this.validPacks.includes(index) != valid) {
+          this.$socket.emit("setValidPack", {index, isValid: valid})
         }
+        return valid;
       },
       getPack(index) {
         return (parseInt(index / this.packLength) + (index % this.packLength ? 1 : 0))
@@ -161,7 +163,7 @@
           this.$socket.emit("packLocked", {pack: pack})
           this.currentPack = pack
         }
-        this.translate(index - 1)
+        this.currentText = this.jsonStart[index - 1].content
       },
       getNextTabIndex(index) {
         const saveIndex = index
@@ -188,7 +190,8 @@
             })
           } else {
             this.$refs["tab-" + (index + 1)][0].focus()
-          }         
+          }
+          this.isValidPack(this.getPack(index))
         }
       },
       startIndex(indexPack) {
@@ -217,9 +220,17 @@
       },
     },
     sockets: {
-      getState: function (lockedPacks) {
-        console.log("GetState", lockedPacks)
-        this.lockedPacks = lockedPacks
+      confirmedPack: function (confirmed) {
+        this.confirmedPacks = confirmed
+      },
+      validPack: function (valid) {
+        this.validPacks = valid
+      },
+      getState: function (packs) {
+        this.lockedPacks = packs.locked
+        this.validPacks = packs.valid
+        this.confirmedPacks = packs.confirmed
+        console.log(packs)
       },
       updateWriting: function (params) {
         this.jsonEnd[params.index - 1].content = params.content
@@ -234,12 +245,35 @@
           this.lockedPacks.splice(this.lockedPacks.indexOf(indexPack), 1)
         console.log(this.lockedPacks)
       },
+    },
+    watch: {
+      clickPack() {
+        if (this.clickPack != 0) {
+          this.page = parseInt(this.clickPack / this.packPerPage) + (this.clickPack % this.packPerPage ? 1 : 0)
+          this.$nextTick(() => {
+            this.$vuetify.goTo(this.$refs["pack-"+this.clickPack][0].$el, {duration: 50, offset: -100})
+          })
+        }
+        console.log(this.jsonEnd, this.jsonStart)
+      }
+    },
+    components: {
+      'translate': Translate,
+      'validate-navigation' : ValidateNavigation,
+      'rules' : Rules,
     }
   }
 </script>
 
-<style>
+<style scoped>
   .lockedPack {
     color: #B0BEC5;
+  }
+  .validPack {
+    background-color: rgb(252, 231, 198) !important;
+  }
+  .confirmedPack * {
+    color: rgb(67, 116, 67) !important;
+    background-color: rgb(210, 255, 210) !important;
   }
 </style>
