@@ -1,10 +1,18 @@
 <template>
-  <v-container v-if="project.hasOwnProperty('name')">
+  <v-container>
+    <div v-if="content_loading" class="text-xs-center">
+      <v-progress-circular
+        indeterminate
+        color="blue-grey"
+      ></v-progress-circular>
+    </div>
     <v-layout
+      v-if="project.hasOwnProperty('name')"
       text-xs-center
       row
       wrap
     >
+      <!-- Title Bar -->
       <v-flex xs12 md12>
         <v-card>
           <v-card-actions>
@@ -17,27 +25,33 @@
               <span class="grey--text">[{{project.type}}] : {{project.startLang}} => {{project.endLang}}</span>
             </div>
             <v-spacer></v-spacer>
-            <v-btn icon><v-icon>save</v-icon></v-btn>
-            <v-btn icon><v-icon>save_alt</v-icon></v-btn>
+            <v-btn title="Save" @click="saveProject" icon><v-icon>save</v-icon></v-btn>
+            <v-btn title="Download" @click="downloadProject" icon><v-icon>save_alt</v-icon></v-btn>
           </v-card-title>
         </v-card>
       </v-flex>
 
+      <!-- Left Panel -->
       <v-flex xs12 md4 class="mt-4">
         <translate :lang="project.endLang.toLowerCase()" :text="currentText" :dev="true"></translate>
-        <rules></rules>
+        <rules :id="project.id"></rules>
+        <chat></chat>
       </v-flex>
 
+      <!-- Right Panel (Project) -->
       <v-flex xs12 md8>
         <v-container>
           <v-layout text-xs-center row wrap>
-            <v-flex xs12 md8>
+            <v-flex xs12>
+              <!-- Pack -->
               <v-card
                 v-for="indexPack in (page == nbPages ? (nbPacks % packPerPage ? nbPacks % packPerPage : packPerPage) : packPerPage)"
                 :class="{'confirmedPack': confirmedPacks.includes(indexPack + (page - 1)*packPerPage),'lockedPack': lockedPacks.includes(indexPack + (page - 1)*packPerPage), 'validPack': validPacks.includes(indexPack + (page - 1)*packPerPage)}"
                 :key="'pack-' + (indexPack + (page - 1)*packPerPage)"
                 :ref="'pack-' + (indexPack + (page - 1)*packPerPage)"
+                class="mb-4"
               >
+                <!-- Element -->
                 <div
                   v-for="(source) in jsonStart.slice(startIndex(indexPack), endIndex(indexPack))"
                   :key="source.index"
@@ -48,12 +62,14 @@
                       <span class="grey--text">{{source.start}} => {{source.end}}</span>
                   </v-card-title>
                   <v-card-text :class="lockedPacks.includes(indexPack + (page - 1)*packPerPage) ? 'lockedPack' : ''">
-                    <span class="headline" v-for="(content, key) in source.content" :key="'p-'+key">{{content}}</span>
+                    <span class="headline" v-html="highlightRules(source.content, rules, rules.map(e=>(e.startWord)))"></span>
                     <v-textarea
+                      id="tabarea"
                       :disabled="confirmedPacks.includes(indexPack + (page - 1)*packPerPage) || lockedPacks.includes(indexPack + (page - 1)*packPerPage)"
                       :ref="'tab-'+source.index"
                       @keydown.enter="onEnter(source.index, $event)"
                       @focus="onFocus(source.index)"
+                      @focusout="onLooseFocus(source.index)"
                       @input="onInput(source.index)"
                       style="text-align: justify; text-align-last: center;"
                       :outline="!lockedPacks.includes(indexPack + (page - 1)*packPerPage && !confirmedPacks.includes(indexPack + (page - 1)*packPerPage))"
@@ -64,6 +80,8 @@
                     ></v-textarea>
                   </v-card-text>
                 </div>
+
+                <!-- Pack Controls -->
                 <v-card-actions>
                   <v-spacer></v-spacer>
                   <v-btn :disabled="!validPacks.includes(indexPack + (page - 1)*packPerPage)" @click="confirmPack(indexPack + (page - 1)*packPerPage)" icon large>
@@ -71,6 +89,8 @@
                   </v-btn>
                 </v-card-actions>
               </v-card>
+
+              <!-- Pagination -->
               <div class="text-xs-center">
                 <v-pagination
                   v-model="page"
@@ -92,10 +112,14 @@
   import Translate from "./project/Translate"
   import ValidateNavigation from "./project/ValidateNavigation"
   import Rules from "./project/Rules"
+  import Chat from "./project/Chat"
+  import {jsonToSrt, highlightRules} from "./tools/parsing.js"
+  import { saveAs } from 'file-saver'
 
   export default {
     props: ['link'],
     data: () => ({
+      content_loading: false,
       page: 1,
       project: {},
       rules: [],
@@ -109,7 +133,7 @@
       validPacks: [],
       confirmedPacks: [],
     }),
-    beforeMount() {
+    mounted() {
       this.getJsonFile()
     },
     computed: {
@@ -124,6 +148,27 @@
       }
     },
     methods: {
+      highlightRules: highlightRules,
+      saveProject() {
+        axios.post('http://localhost:3000/saveproject', {
+          id: this.project.id,
+          link: this.link,
+          json: this.jsonEnd,
+        }).then(response => {
+          if (response.data) {
+            this.$socket.emit("saved")
+            console.log(response.data)
+          } else {
+            console.log(response.data)
+          }
+        })
+      },
+      downloadProject() {
+        if (this.project.type == "SRT") {
+          let blob = new Blob([jsonToSrt(this.jsonEnd)], {type: ""})
+          saveAs(blob, this.project.name + ".srt")
+        }
+      },
       confirmPack(index) {
         if (this.confirmedPacks.includes(index) || this.validPacks.includes(index))
           this.$socket.emit("setConfirmedPack", {index})
@@ -165,6 +210,15 @@
         }
         this.currentText = this.jsonStart[index - 1].content
       },
+      onLooseFocus(index) {
+        this.$nextTick(() => {
+          if (document.activeElement.id != "tabarea") {
+            this.$socket.emit("packUnlocked", {pack: this.currentPack})
+            this.currentPack = 0
+          }
+        })
+        this.$socket.emit("updateJson", {index: index , content: this.jsonEnd[index - 1].content})
+      },
       getNextTabIndex(index) {
         const saveIndex = index
         while (this.lockedPacks.includes(this.getPack(index))) {
@@ -201,8 +255,10 @@
         return (this.startIndex(indexPack) + this.packLength)
       },
       getJsonFile() {
+        this.content_loading = true
         if (this.link) {
           axios.get('http://localhost:3000/project/' + this.link).then(response => {
+            this.content_loading = false
             if (response.data) {
               this.$socket.emit('join-room', this.link)
               this.rules = response.data.rules
@@ -226,11 +282,17 @@
       validPack: function (valid) {
         this.validPacks = valid
       },
-      getState: function (packs) {
-        this.lockedPacks = packs.locked
-        this.validPacks = packs.valid
-        this.confirmedPacks = packs.confirmed
-        console.log(packs)
+      getState: function (data) {
+        console.log(data.updates)
+        console.log(data.packs)
+        this.lockedPacks = data.packs.locked
+        this.validPacks = data.packs.valid
+        this.confirmedPacks = data.packs.confirmed
+        if ('updates' in data) {
+          Object.keys(data.updates).map((key) => {
+            this.jsonEnd[key - 1].content = data.updates[key]
+          })
+        }
       },
       updateWriting: function (params) {
         this.jsonEnd[params.index - 1].content = params.content
@@ -238,13 +300,18 @@
       packLocked: function (indexPack) {
         if (!this.lockedPacks.includes(indexPack))
           this.lockedPacks.push(indexPack)
-        console.log(this.lockedPacks)
       },
       packUnlocked: function (indexPack) {
         if (this.lockedPacks.includes(indexPack))
           this.lockedPacks.splice(this.lockedPacks.indexOf(indexPack), 1)
-        console.log(this.lockedPacks)
       },
+      addRule: function () {
+        axios.get('http://localhost:3000/rules/', {params: {id: this.project.id}}).then(response => {
+          if (response.data) {
+            this.rules = response.data
+          }
+        })
+      }
     },
     watch: {
       clickPack() {
@@ -254,13 +321,13 @@
             this.$vuetify.goTo(this.$refs["pack-"+this.clickPack][0].$el, {duration: 50, offset: -100})
           })
         }
-        console.log(this.jsonEnd, this.jsonStart)
       }
     },
     components: {
       'translate': Translate,
       'validate-navigation' : ValidateNavigation,
       'rules' : Rules,
+      'chat' : Chat,
     }
   }
 </script>

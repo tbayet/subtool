@@ -55,5 +55,30 @@ export const srtToJson = (file) => {
 }
 
 export const jsonToSrt = (file_json) => {
-    return file_json
+    let fileSrt = []
+    file_json.forEach(e => {
+        fileSrt.push(
+            e.index + '\n' + e.start + ' --> ' + e.end + '\n' + e.content + '\n'
+        )
+    })
+    return (fileSrt.join('\n'))
+}
+
+export const highlightRules = (str, rules, words) => {
+    str = replaceStr(str)
+    function replaceStr(string) {
+        return string
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+    }
+    const pattern = new RegExp(`(${words.map(e => (e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('|')})`, 'g')
+    if (str && rules.length && words.length && pattern.test(str)) {
+        const result = str.replace(pattern, match => `<mark title="${rules.find(e => (e.startWord == match)).endWord}">${match}</mark>`);
+        return result
+    } else {
+        return str
+    }
 }

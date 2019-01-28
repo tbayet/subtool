@@ -21,14 +21,29 @@
 </template>
 
 <script>
+  import axios from 'axios'
+
   export default {
+    props: ['id'],
     data: () => ({
       wordFrom: '',
       wordTo: '',
     }),
     methods: {
       submit() {
-        //
+        axios.post('http://localhost:3000/addrule', {
+          id: this.id,
+          startWord: this.wordFrom,
+          endWord: this.wordTo,
+        }).then(response => {
+          if (response.data) {
+            this.wordFrom = "",
+            this.wordTo = "",
+            this.$socket.emit("addRule")
+          } else {
+            console.log("failed")
+          }
+        })
       }
     }
   }

@@ -8,7 +8,6 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' })
 })
 
-
 router.post('/createproject', function(req, res, next) {
   const link = sha224(new Date().getTime().toString())
   const file_end = req.body.file.map(elem => ({ index: elem.index, start: elem.start, end: elem.end, content: "" }))
@@ -70,5 +69,40 @@ router.get('/project/:link', function(req, res, next) {
     }
   })
 })
+
+router.get('/projectlist', function(req, res, next) {
+  res.locals.connection.query("SELECT id, projectName AS name, projectType AS type, startLang, endLang, link FROM projects", function(err, projectList) {
+    if (err) throw err
+    res.send(projectList)
+  })
+})
+
+router.post('/saveproject', function(req, res, next) {
+  fs.access(__dirname + '/../files/' + req.body.link + "/end.json", fs.constants.F_OK | fs.constants.W_OK, (err) => {
+    if (err) {
+      res.send(false)
+    } else {
+      fs.writeFile(__dirname + '/../files/' + req.body.link + "/end.json", JSON.stringify(req.body.json), function (err) {
+        if (err) throw err
+        res.send(true)
+      })
+    }
+  })
+})
+
+router.post('/addrule', function(req, res, next) {
+  res.locals.connection.query("INSERT INTO rules (idProject, startWord, endWord) VALUES (?)", [[req.body.id, req.body.startWord, req.body.endWord]], function(err, rule) {
+    if (err) throw err;
+    res.send(true)
+  })
+})
+
+router.get('/rules', function(req, res, next) {
+  res.locals.connection.query("SELECT DISTINCT startWord, endWord FROM rules WHERE idProject=?", [req.query.id], function(err, projectRules) {
+    if (err) throw err;
+    res.send(projectRules)
+  })
+})
+
 
 module.exports = router

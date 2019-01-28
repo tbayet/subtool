@@ -54,15 +54,34 @@
         <v-alert transition="scale-transition" outline :value="!!alert.type" :type="alert.type">{{alert.message}}</v-alert>
       </v-flex>
 
-      <v-flex xs-10 sm-10 md-6>
+      <v-flex xs-10 sm-10 md-6 class="px-5">
         <h1 class="display-2 font-weight-bold mb-3">
           Join a project
         </h1>
-        <p class="subheading font-weight-regular">
-          For help and collaboration with other Vuetify developers,
-          <br>please join our online
-          <a href="https://community.vuetifyjs.com" target="_blank">Discord Community</a>
-        </p>
+        <div v-if="projects_loading" class="text-xs-center">
+          <v-progress-circular
+            indeterminate
+            color="blue-grey"
+          ></v-progress-circular>
+        </div>
+        <v-list two-line class="mx-5">
+          <v-divider></v-divider>
+          <v-list-tile
+            v-for="project in projectList"
+            :key="project.id"
+            avatar
+            :to="'/project/' + project.link"
+          >
+            <v-list-tile-avatar>
+              <h1>{{project.type}}</h1>
+            </v-list-tile-avatar>
+            <v-list-tile-content>
+              <v-list-tile-title>{{ project.name }}</v-list-tile-title>
+              <v-list-tile-sub-title>{{ project.startLang }} => {{ project.endLang }}</v-list-tile-sub-title>
+            </v-list-tile-content>
+          </v-list-tile>
+          <v-divider></v-divider>
+        </v-list>
       </v-flex>
     </v-layout>
   </v-container>
@@ -84,6 +103,8 @@
       project_privacy: "1",
       project_startLang: "EN",
       project_endLang: "FR",
+      projectList: [],
+      projects_loading: false,
       rules: {
         name: [
           v => (!v || (v && v.length >= 4 && v.length <= 50)) || 'This must be between 4 and 50 characters',
@@ -93,9 +114,21 @@
         ],
       }
     }),
+    mounted() {
+      this.loadProjects()
+    },
     methods: {
       browse() {
         this.$refs.file_input.click()
+      },
+      loadProjects() {
+        this.projects_loading = true
+        axios.get('http://localhost:3000/projectlist').then(response => {
+          if (response.data) {
+            this.projects_loading = false
+            this.projectList = response.data
+          }
+        })
       },
       addFile() {
         this.alert = {}
