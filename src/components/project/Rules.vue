@@ -41,7 +41,7 @@
             this.wordTo = "",
             this.$socket.emit("addRule")
           } else {
-            console.log("failed")
+            //
           }
         })
       }

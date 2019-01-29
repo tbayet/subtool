@@ -3,6 +3,7 @@
     <div
       v-for="index in (totalPacks)"
       :key="index"
+      :title="'Pack: ' + index"
       :class="{'selected': index == displayValue, 'default': true, 'locked': locked.includes(index) && !valid.includes(index), 'confirmed': confirmed.includes(index), 'valid': valid.includes(index) && !confirmed.includes(index)}"
       @click="selectItem(index)"
     >

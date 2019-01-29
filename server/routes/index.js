@@ -30,8 +30,8 @@ router.post('/createproject', function(req, res, next) {
                 fs.rmdir(__dirname + '/../files/' + link, () => { res.send(false) })
               })
             } else {
-              res.locals.connection.query("INSERT INTO projects (projectName, projectType, privacy, startLang, endLang, link) VALUES (?)",
-                [[req.body.name, req.body.type.toUpperCase(), parseInt(req.body.privacy), req.body.startLang.toUpperCase(), req.body.endLang.toUpperCase(), link]], function(err, result) {
+              res.locals.connection.query("INSERT INTO projects (projectName, projectType, privacy, startLang, endLang, link, packLength) VALUES (?)",
+                [[req.body.name, req.body.type.toUpperCase(), parseInt(req.body.privacy), req.body.startLang.toUpperCase(), req.body.endLang.toUpperCase(), link, req.body.packLength]], function(err, result) {
                 if (err) {
                   fs.unlink(__dirname + '/../files/' + link + '/start.json', () => {
                     fs.unlink(__dirname + '/../files/' + link + '/end.json', () => {
@@ -51,7 +51,7 @@ router.post('/createproject', function(req, res, next) {
 })
 
 router.get('/project/:link', function(req, res, next) {
-  res.locals.connection.query("SELECT id, projectName AS name, projectType AS type, startLang, endLang FROM projects WHERE link=?", [req.params.link], function(err, project) {
+  res.locals.connection.query("SELECT id, projectName AS name, projectType AS type, startLang, endLang, packLength FROM projects WHERE link=?", [req.params.link], function(err, project) {
     if (err) throw err
     if (project.length == 1) {
       res.locals.connection.query("SELECT startWord, endWord FROM rules WHERE idProject=?", [project[0].id], function(err, rules) {
@@ -71,7 +71,7 @@ router.get('/project/:link', function(req, res, next) {
 })
 
 router.get('/projectlist', function(req, res, next) {
-  res.locals.connection.query("SELECT id, projectName AS name, projectType AS type, startLang, endLang, link FROM projects", function(err, projectList) {
+  res.locals.connection.query("SELECT id, projectName AS name, projectType AS type, startLang, endLang, link FROM projects WHERE privacy=1", function(err, projectList) {
     if (err) throw err
     res.send(projectList)
   })

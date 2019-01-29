@@ -29,10 +29,8 @@ io.on('connection', function (socket) {
         if (!(room in packs)){
             packs[room] = {locked: [], valid: [], confirmed: []}
             updates[room] = {}
-            console.log("Created")
         } else {
             socket.emit("getState", { packs: packs[room], updates: updates[room]})
-            console.log("Emitted")
         }
     })
     socket.on("saved", function () {

@@ -40,16 +40,27 @@
             <v-radio color="error" label="Private" value="2"></v-radio>
           </v-radio-group>
           <v-text-field
+            mask="AA"
             v-model="project_startLang"
             :rules="rules.lang"
             label="Language from"
           ></v-text-field>
           <v-text-field
+            mask="AA"
             v-model="project_endLang"
             :rules="rules.lang"
             label="Language to"
           ></v-text-field>
-          <v-btn color="primary" @click.native="formSubmit">Create</v-btn>
+          <v-text-field
+            v-model="project_packLength"
+            type="number"
+            min="1"
+            max="50"
+            step="1"
+            :rules="rules.packLength"
+          >
+          </v-text-field>
+          <v-btn color="primary" :disabled="!form_valid" @click.native="formSubmit">Create</v-btn>
         </v-form>
         <v-alert transition="scale-transition" outline :value="!!alert.type" :type="alert.type">{{alert.message}}</v-alert>
       </v-flex>
@@ -105,12 +116,16 @@
       project_endLang: "FR",
       projectList: [],
       projects_loading: false,
+      project_packLength: 10,
       rules: {
         name: [
-          v => (!v || (v && v.length >= 4 && v.length <= 50)) || 'This must be between 4 and 50 characters',
+          v => (v && v.length >= 4 && v.length <= 128) || 'This must be between 4 and 128 characters',
         ],
         lang: [
-          v => (!v || (v && v.length == 2)) || 'Lang uses Alpha-2 country code (ex: FR, EN, ...)',
+          v => (v && v.length == 2) || 'Lang uses Alpha-2 country code (ex: FR, EN, ...)',
+        ],
+        packLength: [
+          v => (v && v >= 1 && v <= 50 && parseInt(v) == v) || 'Length must integer be between 1 and 50',
         ],
       }
     }),
@@ -156,8 +171,7 @@
         const fr = new FileReader()
         this.file_name = file.name
         fr.onloadend = () => {
-          //console.log("type: ", file)
-          if (file.type == "" && file.name.substr(-4, 4).toLowerCase() == ".srt") {
+          if ((file.type == "" || file.type == "application/x-subrip" || file.type == "text/plain") && file.name.substr(-4, 4).toLowerCase() == ".srt") {
             this.file_selected = fr.result
             this.file_preview = this.file_selected.substr(0, 300) + "..."
           } else {
@@ -179,7 +193,8 @@
             file: this.file_json,
             type: "srt",
             startLang: this.project_startLang,
-            endLang: this.project_endLang
+            endLang: this.project_endLang,
+            packLength: this.project_packLength,
           }).then(response => {
             if (response.data) {
               this.$router.push('/project/' + response.data)

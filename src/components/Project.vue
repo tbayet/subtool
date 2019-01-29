@@ -25,9 +25,13 @@
               <span class="grey--text">[{{project.type}}] : {{project.startLang}} => {{project.endLang}}</span>
             </div>
             <v-spacer></v-spacer>
+            <link-share :linkto="'http://localhost:8080/#/project/' + link"></link-share>
+            <v-spacer></v-spacer>
             <v-btn title="Save" @click="saveProject" icon><v-icon>save</v-icon></v-btn>
             <v-btn title="Download" @click="downloadProject" icon><v-icon>save_alt</v-icon></v-btn>
+
           </v-card-title>
+
         </v-card>
       </v-flex>
 
@@ -35,7 +39,7 @@
       <v-flex xs12 md4 class="mt-4">
         <translate :lang="project.endLang.toLowerCase()" :text="currentText" :dev="true"></translate>
         <rules :id="project.id"></rules>
-        <chat></chat>
+        <chat :link="link"></chat>
       </v-flex>
 
       <!-- Right Panel (Project) -->
@@ -62,7 +66,9 @@
                       <span class="grey--text">{{source.start}} => {{source.end}}</span>
                   </v-card-title>
                   <v-card-text :class="lockedPacks.includes(indexPack + (page - 1)*packPerPage) ? 'lockedPack' : ''">
+                    <!-- Highlighted text -->
                     <span class="headline" v-html="highlightRules(source.content, rules, rules.map(e=>(e.startWord)))"></span>
+
                     <v-textarea
                       id="tabarea"
                       :disabled="confirmedPacks.includes(indexPack + (page - 1)*packPerPage) || lockedPacks.includes(indexPack + (page - 1)*packPerPage)"
@@ -113,6 +119,7 @@
   import ValidateNavigation from "./project/ValidateNavigation"
   import Rules from "./project/Rules"
   import Chat from "./project/Chat"
+  import LinkShare from "./project/LinkShare"
   import {jsonToSrt, highlightRules} from "./tools/parsing.js"
   import { saveAs } from 'file-saver'
 
@@ -157,15 +164,14 @@
         }).then(response => {
           if (response.data) {
             this.$socket.emit("saved")
-            console.log(response.data)
           } else {
-            console.log(response.data)
+            //
           }
         })
       },
       downloadProject() {
         if (this.project.type == "SRT") {
-          let blob = new Blob([jsonToSrt(this.jsonEnd)], {type: ""})
+          let blob = new Blob([jsonToSrt(this.jsonEnd)], {type: "application/x-subrip"})
           saveAs(blob, this.project.name + ".srt")
         }
       },
@@ -261,11 +267,11 @@
             this.content_loading = false
             if (response.data) {
               this.$socket.emit('join-room', this.link)
+              this.packLength = response.data.project.packLength
               this.rules = response.data.rules
               this.jsonStart = response.data.jsonStart
               this.jsonEnd = response.data.jsonEnd
               this.project = response.data.project
-              console.log(this.project, this.rules, this.jsonStart, this.jsonEnd)
             } else {
               this.$router.push('/')
             }
@@ -283,8 +289,6 @@
         this.validPacks = valid
       },
       getState: function (data) {
-        console.log(data.updates)
-        console.log(data.packs)
         this.lockedPacks = data.packs.locked
         this.validPacks = data.packs.valid
         this.confirmedPacks = data.packs.confirmed
@@ -321,13 +325,24 @@
             this.$vuetify.goTo(this.$refs["pack-"+this.clickPack][0].$el, {duration: 50, offset: -100})
           })
         }
+      },
+      '$route' (to, from) {
+        if (to.query && to.query.anchor) {
+          if (to.query.anchor >= 1 && to.query.anchor <= this.jsonStart.length) {
+            this.page = this.getPage(parseInt(to.query.anchor))
+            this.$nextTick(() => {
+              this.$vuetify.goTo(this.$refs["tab-"+to.query.anchor][0].$el, {duration: 50, offset: -220})
+            })
+          }
+        }
       }
     },
     components: {
       'translate': Translate,
-      'validate-navigation' : ValidateNavigation,
-      'rules' : Rules,
-      'chat' : Chat,
+      'validate-navigation': ValidateNavigation,
+      'rules': Rules,
+      'chat': Chat,
+      'link-share': LinkShare,
     }
   }
 </script>

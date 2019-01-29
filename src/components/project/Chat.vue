@@ -3,7 +3,7 @@
     <v-toolbar color="grey-blue" dark>
       <v-toolbar-title>Chat</v-toolbar-title>
     </v-toolbar>
-    <v-form @keyup.native.enter.prevent="sendMessage">
+    <v-form @submit.prevent @keyup.native.enter.prevent="sendMessage">
       <v-text-field
         class="px-3 mt-2"
         v-model="newMessage"
@@ -25,10 +25,10 @@
           >
             <v-list-tile-content>
               <v-list-tile-title>{{message.author}}</v-list-tile-title>
-              <v-list-tile-sub-title>{{message.content}}</v-list-tile-sub-title>
+              <v-list-tile-sub-title v-html="message.content"></v-list-tile-sub-title>
             </v-list-tile-content>
           </v-list-tile>
-          <v-divider></v-divider>
+          <v-divider :key="'d'+index"></v-divider>
         </template>
       </v-list>
     </div>
@@ -36,17 +36,17 @@
 </template>
 
 <script>
-  import axios from 'axios'
+  import {parseMessage} from '../tools/parsing.js'
 
   export default {
-    props: ['id'],
+    props: ['link'],
     data: () => ({
       newMessage: "",
       chat: [],
     }),
     methods: {
       sendMessage() {
-        this.$socket.emit("newMessage", this.newMessage)
+        this.$socket.emit("newMessage", parseMessage(this.newMessage, "http://localhost:8080/#/project/" + this.link))
         this.newMessage = ""
       }
     },

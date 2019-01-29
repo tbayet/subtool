@@ -64,19 +64,31 @@ export const jsonToSrt = (file_json) => {
     return (fileSrt.join('\n'))
 }
 
+function replaceStr(string) {
+    return string
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+}
+
 export const highlightRules = (str, rules, words) => {
     str = replaceStr(str)
-    function replaceStr(string) {
-        return string
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;")
-    }
     const pattern = new RegExp(`(${words.map(e => (e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('|')})`, 'g')
     if (str && rules.length && words.length && pattern.test(str)) {
-        const result = str.replace(pattern, match => `<mark title="${rules.find(e => (e.startWord == match)).endWord}">${match}</mark>`);
+        const result = str.replace(pattern, match => `<mark title="${rules.find(e => (e.startWord == match)).endWord}">${match}</mark>`)
+        return result
+    } else {
+        return str
+    }
+}
+
+export const parseMessage = (str, link) => {
+    str = replaceStr(str)
+    const pattern = new RegExp(/#\d+/, 'g')
+    if (str && pattern.test(str)) {
+        const result = str.replace(pattern, match => `<a href="${link + '?anchor=' +match.substr(1)}">${match}</a>`)
         return result
     } else {
         return str

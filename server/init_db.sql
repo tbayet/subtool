@@ -8,7 +8,8 @@ CREATE TABLE projects (
     privacy INT NOT NULL,
     startLang VARCHAR(255) NOT NULL,
     endLang VARCHAR(255) NOT NULL,
-    link VARCHAR(255) NOT NULL
+    link VARCHAR(255) NOT NULL,
+    packLength INT NOT NULL
 );
 CREATE TABLE rules (
     idProject INT NOT NULL,
