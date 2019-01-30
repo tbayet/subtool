@@ -16,7 +16,7 @@
       <v-flex xs12 md12>
         <v-card>
           <v-card-actions>
-            <validate-navigation v-model="clickPack" :locked="lockedPacks" :valid="validPacks" :confirmed="confirmedPacks" :totalPacks="nbPacks"></validate-navigation>           
+            <validate-navigation v-model="clickPack" :locked="lockedPacks" :valid="validPacks" :confirmed="confirmedPacks" :totalPacks="nbPacks"></validate-navigation>
           </v-card-actions>
 
           <v-card-title primary-title>
@@ -37,7 +37,7 @@
 
       <!-- Left Panel -->
       <v-flex xs12 md4 class="mt-4">
-        <translate :lang="project.endLang.toLowerCase()" :text="currentText" :dev="true"></translate>
+        <translate :lang="project.endLang.toLowerCase()" :text="currentText" :dev="false"></translate>
         <rules :id="project.id"></rules>
         <chat :link="link"></chat>
       </v-flex>
