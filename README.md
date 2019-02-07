@@ -1,6 +1,7 @@
 
 # subtool
-A free project made in 5 days for an interview
+A free project made in 5 days for an interview.
+
 A collaborative tool to translate subtitles from a language to another, editing the same file in group, through packs locking/unlocking, packs validation, links, pre-translation functionnalities.
 
 Press enter to valid your entry, shift-enter to newline. Use '#' + the number of the subtitle to link in the chat (ex: "need help at #124"). Clic on the project bar on top to go to the selected pack. Add a rule (ex: Darth Vader => Dark Vador) to highlight every occurence of the word and suggest its defined translation when cursor is on. 
